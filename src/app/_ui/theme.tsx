@@ -10,7 +10,8 @@ import { ThemeProvider, useTheme } from "next-themes";
 export const THEME_MODES = ["light", "dark"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 export const DEFAULT_THEME_MODE: ThemeMode = "dark";
-export const THEME_STORAGE_KEY = "vdecor-desk-theme";
+// Renamed when dark became the default, so choices saved under the old light default don't stick.
+export const THEME_STORAGE_KEY = "vdecor-desk-theme-v2";
 
 const isMode = (v: unknown): v is ThemeMode => v === "light" || v === "dark";
 
