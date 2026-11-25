@@ -1,0 +1,325 @@
+/*
+ * Design tokens - the ONLY place colours are defined.
+ *
+ * Mode = a single `.dark` class on <html> (set by next-themes, see ThemeModeProvider).
+ * Every colour is a CSS variable: light values under :root, dark values under .dark,
+ * same names in both. Components use token classes only (bg-background, text-tag-quote-fg,
+ * shadow-card ...); no hex / palette / arbitrary colour classes (see scripts/check-colors.mjs).
+ */
+
+/* `dark:` follows the class on <html>, never the OS setting. */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-brand: "PT Sans", ui-sans-serif, system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* core */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* charts (also status hues in charts / timeline dots) */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* sidebar + app header shell */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* enquiry status badges: bg / fg / border */
+  --color-status-received-bg: var(--status-received-bg);
+  --color-status-received-fg: var(--status-received-fg);
+  --color-status-received-border: var(--status-received-border);
+  --color-status-quoted-bg: var(--status-quoted-bg);
+  --color-status-quoted-fg: var(--status-quoted-fg);
+  --color-status-quoted-border: var(--status-quoted-border);
+  --color-status-accepted-bg: var(--status-accepted-bg);
+  --color-status-accepted-fg: var(--status-accepted-fg);
+  --color-status-accepted-border: var(--status-accepted-border);
+  --color-status-rejected-bg: var(--status-rejected-bg);
+  --color-status-rejected-fg: var(--status-rejected-fg);
+  --color-status-rejected-border: var(--status-rejected-border);
+  --color-status-cancelled-bg: var(--status-cancelled-bg);
+  --color-status-cancelled-fg: var(--status-cancelled-fg);
+  --color-status-cancelled-border: var(--status-cancelled-border);
+
+  /* "Active" badges (employees, lookups) */
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-success-border: var(--success-border);
+
+  /* tags: enquiry number (violet), work type (orange), Zoho quote number (slate) */
+  --color-tag-enquiry-bg: var(--tag-enquiry-bg);
+  --color-tag-enquiry-bg-hover: var(--tag-enquiry-bg-hover);
+  --color-tag-enquiry-fg: var(--tag-enquiry-fg);
+  --color-tag-enquiry-border: var(--tag-enquiry-border);
+  --color-tag-enquiry-border-hover: var(--tag-enquiry-border-hover);
+  --color-tag-worktype-bg: var(--tag-worktype-bg);
+  --color-tag-worktype-soft: var(--tag-worktype-soft);
+  --color-tag-worktype-soft-hover: var(--tag-worktype-soft-hover);
+  --color-tag-worktype-fg: var(--tag-worktype-fg);
+  --color-tag-worktype-border: var(--tag-worktype-border);
+  --color-tag-quote-bg: var(--tag-quote-bg);
+  --color-tag-quote-fg: var(--tag-quote-fg);
+  --color-tag-quote-border: var(--tag-quote-border);
+
+  /* dashboard KPI cards: coloured title + solid icon badge */
+  --color-kpi-blue: var(--kpi-blue);
+  --color-kpi-blue-fg: var(--kpi-blue-fg);
+  --color-kpi-amber: var(--kpi-amber);
+  --color-kpi-amber-fg: var(--kpi-amber-fg);
+  --color-kpi-green: var(--kpi-green);
+  --color-kpi-green-fg: var(--kpi-green-fg);
+  --color-kpi-violet: var(--kpi-violet);
+  --color-kpi-violet-fg: var(--kpi-violet-fg);
+  --color-kpi-icon-fg: var(--kpi-icon-fg);
+
+  /* modal / sheet backdrop */
+  --color-overlay: var(--overlay);
+
+  /* elevation */
+  --shadow-card: var(--elevation-card);
+  --shadow-fab: var(--elevation-fab);
+}
+
+/* ---------------------------------------------------------------- light ---- */
+/* `.light` lets a subtree (e.g. the mode-picker preview) show light tokens inside dark mode. */
+:root,
+.light {
+  color-scheme: light;
+  --radius: 0.625rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.141 0.005 285.823);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.141 0.005 285.823);
+  /* brand blue for primary buttons (white text 4.7:1) */
+  --primary: #006fe6;
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.552 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.705 0.015 286.067);
+
+  /* blue = received/total, amber = quoted, green = won, red = lost, zinc = cancelled */
+  --chart-1: oklch(0.623 0.214 259.815);
+  --chart-2: oklch(0.769 0.188 70.08);
+  --chart-3: oklch(0.627 0.194 149.214);
+  --chart-4: oklch(0.577 0.245 27.325);
+  --chart-5: oklch(0.705 0.015 286.067);
+
+  --sidebar: #fafafa;
+  --sidebar-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.21 0.006 285.885);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: #efeff0;
+  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-ring: oklch(0.705 0.015 286.067);
+
+  --status-received-bg: oklch(0.97 0.014 254.604);
+  --status-received-fg: oklch(0.488 0.243 264.376);
+  --status-received-border: oklch(0.882 0.059 254.128);
+  --status-quoted-bg: oklch(0.987 0.022 95.277);
+  --status-quoted-fg: oklch(0.555 0.163 48.998);
+  --status-quoted-border: oklch(0.924 0.12 95.746);
+  --status-accepted-bg: oklch(0.982 0.018 155.826);
+  --status-accepted-fg: oklch(0.527 0.154 150.069);
+  --status-accepted-border: oklch(0.925 0.084 155.995);
+  --status-rejected-bg: oklch(0.971 0.013 17.38);
+  --status-rejected-fg: oklch(0.505 0.213 27.518);
+  --status-rejected-border: oklch(0.885 0.062 18.334);
+  --status-cancelled-bg: oklch(0.967 0.001 286.375);
+  --status-cancelled-fg: oklch(0.442 0.017 285.786);
+  --status-cancelled-border: oklch(0.92 0.004 286.32);
+
+  --success-bg: var(--status-accepted-bg);
+  --success-fg: var(--status-accepted-fg);
+  --success-border: var(--status-accepted-border);
+
+  --tag-enquiry-bg: oklch(0.943 0.029 294.588);
+  --tag-enquiry-bg-hover: oklch(0.894 0.057 293.283);
+  --tag-enquiry-fg: oklch(0.432 0.232 292.759);
+  --tag-enquiry-border: oklch(0.811 0.111 293.571);
+  --tag-enquiry-border-hover: oklch(0.702 0.183 293.541);
+  --tag-worktype-bg: #fdbf6f;
+  --tag-worktype-soft: rgb(253 191 111 / 0.1);
+  --tag-worktype-soft-hover: rgb(253 191 111 / 0.2);
+  --tag-worktype-fg: #6b3500;
+  --tag-worktype-border: #f0a94e;
+  --tag-quote-bg: oklch(0.968 0.007 247.896);
+  --tag-quote-fg: oklch(0.372 0.044 257.287);
+  --tag-quote-border: oklch(0.869 0.022 252.894);
+
+  --kpi-blue: oklch(0.546 0.245 262.881);
+  --kpi-blue-fg: oklch(0.424 0.199 265.638);
+  --kpi-amber: oklch(0.769 0.188 70.08);
+  --kpi-amber-fg: oklch(0.473 0.137 46.201);
+  --kpi-green: oklch(0.596 0.145 163.225);
+  --kpi-green-fg: oklch(0.432 0.095 166.913);
+  --kpi-violet: oklch(0.541 0.281 293.009);
+  --kpi-violet-fg: oklch(0.432 0.232 292.759);
+  --kpi-icon-fg: oklch(1 0 0);
+
+  --overlay: oklch(0 0 0 / 50%);
+
+  --elevation-card:
+    0 1px 2px oklch(0.21 0.006 285.885 / 0.04), 0 8px 24px -12px oklch(0.21 0.006 285.885 / 0.12);
+  --elevation-fab:
+    inset 0 1px 0 oklch(1 0 0 / 0.25), 0 8px 20px -6px oklch(0.21 0.006 285.885 / 0.45);
+}
+
+/* ----------------------------------------------------------------- dark ---- */
+.dark {
+  color-scheme: dark;
+
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.183 0.006 285.8);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: #006fe6;
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  /* used as text on dark bg (errors, required *) and as a solid button fill with white text */
+  --destructive: oklch(0.637 0.237 25.331);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.552 0.016 285.938);
+
+  /* a touch brighter so series stay distinct on dark */
+  --chart-1: oklch(0.672 0.19 259.8);
+  --chart-2: oklch(0.795 0.17 72);
+  --chart-3: oklch(0.723 0.19 149.6);
+  --chart-4: oklch(0.668 0.22 25.3);
+  --chart-5: oklch(0.6 0.016 286);
+
+  --sidebar: oklch(0.17 0.005 285.8);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.92 0.004 286.32);
+  --sidebar-primary-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.552 0.016 285.938);
+
+  /* tinted fills + light text: >= 4.5:1 on the dark card */
+  --status-received-bg: oklch(0.623 0.214 259.815 / 16%);
+  --status-received-fg: oklch(0.809 0.105 251.813);
+  --status-received-border: oklch(0.623 0.214 259.815 / 40%);
+  --status-quoted-bg: oklch(0.769 0.188 70.08 / 16%);
+  --status-quoted-fg: oklch(0.879 0.169 91.605);
+  --status-quoted-border: oklch(0.769 0.188 70.08 / 40%);
+  --status-accepted-bg: oklch(0.723 0.219 149.579 / 16%);
+  --status-accepted-fg: oklch(0.871 0.15 154.449);
+  --status-accepted-border: oklch(0.723 0.219 149.579 / 40%);
+  --status-rejected-bg: oklch(0.637 0.237 25.331 / 16%);
+  --status-rejected-fg: oklch(0.808 0.114 19.571);
+  --status-rejected-border: oklch(0.637 0.237 25.331 / 40%);
+  --status-cancelled-bg: oklch(1 0 0 / 7%);
+  --status-cancelled-fg: oklch(0.785 0.012 286);
+  --status-cancelled-border: oklch(1 0 0 / 16%);
+
+  --success-bg: var(--status-accepted-bg);
+  --success-fg: var(--status-accepted-fg);
+  --success-border: var(--status-accepted-border);
+
+  --tag-enquiry-bg: oklch(0.606 0.25 292.717 / 18%);
+  --tag-enquiry-bg-hover: oklch(0.606 0.25 292.717 / 28%);
+  --tag-enquiry-fg: oklch(0.811 0.111 293.571);
+  --tag-enquiry-border: oklch(0.606 0.25 292.717 / 45%);
+  --tag-enquiry-border-hover: oklch(0.702 0.183 293.541);
+  --tag-worktype-bg: rgb(253 191 111 / 0.16);
+  --tag-worktype-soft: rgb(253 191 111 / 0.07);
+  --tag-worktype-soft-hover: rgb(253 191 111 / 0.14);
+  --tag-worktype-fg: #fdbf6f;
+  --tag-worktype-border: rgb(253 191 111 / 0.45);
+  --tag-quote-bg: oklch(1 0 0 / 7%);
+  --tag-quote-fg: oklch(0.869 0.022 252.894);
+  --tag-quote-border: oklch(1 0 0 / 20%);
+
+  --kpi-blue: oklch(0.623 0.214 259.815);
+  --kpi-blue-fg: oklch(0.809 0.105 251.813);
+  --kpi-amber: oklch(0.769 0.188 70.08);
+  --kpi-amber-fg: oklch(0.879 0.169 91.605);
+  --kpi-green: oklch(0.696 0.17 162.48);
+  --kpi-green-fg: oklch(0.845 0.143 164.978);
+  --kpi-violet: oklch(0.606 0.25 292.717);
+  --kpi-violet-fg: oklch(0.811 0.111 293.571);
+  --kpi-icon-fg: oklch(1 0 0);
+
+  --overlay: oklch(0 0 0 / 70%);
+
+  /* dark elevation: thin white ring + deeper, stronger shadow */
+  --elevation-card: 0 0 0 1px oklch(1 0 0 / 6%), 0 8px 24px -12px oklch(0 0 0 / 70%);
+  --elevation-fab:
+    inset 0 1px 0 oklch(1 0 0 / 0.35), 0 0 0 1px oklch(1 0 0 / 10%), 0 8px 20px -6px oklch(0 0 0 / 75%);
+}
+
+/* ----------------------------------------------------------------- base ---- */
+@layer base {
+  /* Same background on html + body so overscroll / unpainted areas never flash. */
+  html,
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+}
+
+/*
+ * Brand logo (black artwork on white): multiply drops the white on light shells;
+ * in dark mode invert to white-on-black and screen drops the black.
+ */
+.brand-logo {
+  mix-blend-mode: multiply;
+}
+.dark .brand-logo {
+  filter: invert(1);
+  mix-blend-mode: screen;
+}

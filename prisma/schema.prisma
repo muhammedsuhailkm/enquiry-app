@@ -1,0 +1,173 @@
+// Prisma ORM v7 + PostgreSQL (migrated from SQL Server; tables, columns and keys are unchanged).
+// Statuses/roles stay String columns validated in src/lib/constants.ts. Every relation uses
+// NoAction (kept from SQL Server); we soft-delete enquiries and never hard-delete users.
+// Lookup names are CITEXT so uniqueness stays case-insensitive, as it was under SQL Server's
+// default collation ("website" still clashes with "Website"). Lengths are enforced in validators.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @db.VarChar(255)
+  role         String   @default("EMPLOYEE") @db.VarChar(20) // ADMIN | EMPLOYEE
+  designation  String   @db.VarChar(100)
+  phone        String?  @db.VarChar(30)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  enquiriesCreated  Enquiry[]              @relation("EnquiryCreatedBy")
+  enquiriesAssigned Enquiry[]              @relation("EnquirySalesperson")
+  customersCreated  Customer[]
+  statusChanges     EnquiryStatusHistory[]
+}
+
+model Customer {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(150)
+  companyName String?  @db.VarChar(150)
+  phone       String?  @db.VarChar(30)
+  email       String?  @db.VarChar(255)
+  address     String?  @db.VarChar(500)
+  createdById Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User      @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  enquiries Enquiry[]
+
+  @@index([name])
+}
+
+// Work scope is two-level: WorkType (Floors, Walls, ...) -> SubWorkType (Vinyl Flooring, ...).
+// An enquiry can have many work types and many sub work types (junction tables below);
+// every selected sub must belong to one of the enquiry's selected work types (enforced in src/lib/work-scope.ts).
+model WorkType {
+  id           Int               @id @default(autoincrement())
+  name         String            @unique @db.Citext
+  isActive     Boolean           @default(true)
+  sortOrder    Int               @default(0)
+  createdAt    DateTime          @default(now())
+  subWorkTypes SubWorkType[]
+  enquiries    EnquiryWorkType[]
+}
+
+model SubWorkType {
+  id         Int                  @id @default(autoincrement())
+  workTypeId Int
+  name       String               @db.Citext
+  isActive   Boolean              @default(true)
+  sortOrder  Int                  @default(0)
+  createdAt  DateTime             @default(now())
+  workType   WorkType             @relation(fields: [workTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  enquiries  EnquirySubWorkType[]
+
+  @@unique([workTypeId, name])
+}
+
+model EnquiryWorkType {
+  enquiryId  Int
+  workTypeId Int
+  enquiry    Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  workType   WorkType @relation(fields: [workTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([enquiryId, workTypeId])
+  @@index([workTypeId]) // dashboard "by work type" + reverse lookups
+}
+
+model EnquirySubWorkType {
+  enquiryId     Int
+  subWorkTypeId Int
+  enquiry       Enquiry     @relation(fields: [enquiryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subWorkType   SubWorkType @relation(fields: [subWorkTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([enquiryId, subWorkTypeId])
+  @@index([subWorkTypeId])
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique @db.Citext
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  enquiries Enquiry[]
+}
+
+model LeadSource {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique @db.Citext
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  enquiries Enquiry[]
+}
+
+// Per-year counter used to generate ENQ-YYYY-0001 numbers atomically.
+model EnquirySequence {
+  year   Int @id
+  lastNo Int @default(0)
+}
+
+model Enquiry {
+  id                   Int       @id @default(autoincrement())
+  enquiryNo            String    @unique @db.VarChar(20)
+  customerId           Int
+  categoryId           Int
+  leadSourceId         Int
+  enquiryDate          DateTime  @db.Date
+  scopeOfWork          String    @db.Text
+  additionalDetails    String?   @db.Text
+  // Snapshot of the creator at creation time (stays correct if the profile changes later)
+  createdById          Int
+  createdByName        String    @db.VarChar(100)
+  createdByDesignation String    @db.VarChar(100)
+  salespersonId        Int
+  status               String    @default("RECEIVED") @db.VarChar(20) // RECEIVED | QUOTED | ACCEPTED | REJECTED | CANCELLED
+  revisionNo           Int       @default(0)
+  quoteNo              String?   @db.VarChar(50) // current quotation number in Zoho (set when quoted / revised)
+  lostReason           String?   @db.VarChar(500)
+  closedAt             DateTime?
+  isDeleted            Boolean   @default(false)
+  deletedAt            DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  customer     Customer               @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  workTypes    EnquiryWorkType[]
+  subWorkTypes EnquirySubWorkType[]
+  category     Category               @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  leadSource   LeadSource             @relation(fields: [leadSourceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy    User                   @relation("EnquiryCreatedBy", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  salesperson  User                   @relation("EnquirySalesperson", fields: [salespersonId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  history      EnquiryStatusHistory[]
+
+  @@index([isDeleted, salespersonId, status])
+  @@index([isDeleted, enquiryDate])
+  @@index([customerId])
+}
+
+model EnquiryStatusHistory {
+  id          Int      @id @default(autoincrement())
+  enquiryId   Int
+  action      String   @db.VarChar(20) // CREATE | CHANGE | REVISE | REOPEN
+  fromStatus  String?  @db.VarChar(20)
+  toStatus    String   @db.VarChar(20)
+  revisionNo  Int
+  quoteNo     String?  @db.VarChar(50) // Zoho quote number in effect at this event (audit trail)
+  remarks     String?  @db.VarChar(1000)
+  changedById Int
+  changedAt   DateTime @default(now())
+
+  enquiry   Enquiry @relation(fields: [enquiryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  changedBy User    @relation(fields: [changedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([enquiryId, changedAt])
+}

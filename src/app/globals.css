@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+/* All colours / tokens / light + dark values live here. */
+@import "../styles/theme.css";
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply antialiased;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/*
+ * Mobile (< md): 44px minimum tap targets and 16px form text (stops iOS zoom-on-focus).
+ * Unlayered so it wins over the components' h-9 / text-sm utilities.
+ */
+@media (max-width: 47.99rem) {
+  [data-slot="input"],
+  [data-slot="select-trigger"]:not([data-size="sm"]),
+  [data-slot="button"][data-size="default"],
+  [data-slot="button"][data-size="lg"] {
+    min-height: 2.75rem;
+  }
+  [data-slot="button"][data-size="icon"] {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+  [data-slot="input"],
+  [data-slot="textarea"],
+  [data-slot="select-trigger"] {
+    font-size: 1rem;
+  }
+}
