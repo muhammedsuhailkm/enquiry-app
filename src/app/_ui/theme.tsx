@@ -4,12 +4,12 @@ import { ThemeProvider, useTheme } from "next-themes";
 
 /**
  * Theme mode = a single `.dark` class on <html>; all colours are CSS variables that change
- * under it (src/styles/theme.css). Two modes only: light (default) and dark. The OS
+ * under it (src/styles/theme.css). Two modes only: light and dark (default). The OS
  * appearance is deliberately ignored - the user's choice is all that counts.
  */
 export const THEME_MODES = ["light", "dark"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
-export const DEFAULT_THEME_MODE: ThemeMode = "light";
+export const DEFAULT_THEME_MODE: ThemeMode = "dark";
 export const THEME_STORAGE_KEY = "vdecor-desk-theme";
 
 const isMode = (v: unknown): v is ThemeMode => v === "light" || v === "dark";
@@ -47,7 +47,7 @@ export function useThemeMode(): { mode: ThemeMode; setMode: (m: ThemeMode) => vo
 
 function readHtmlClass(): ThemeMode {
   if (typeof document === "undefined") return DEFAULT_THEME_MODE;
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  return document.documentElement.classList.contains("light") ? "light" : "dark";
 }
 
 const noop = () => () => {};

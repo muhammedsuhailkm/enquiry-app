@@ -35,44 +35,44 @@ afterEach(() => {
 });
 
 describe("useThemeMode", () => {
-  it("defaults to light", () => {
+  it("defaults to dark", () => {
     const { result } = renderHook(() => useThemeMode(), { wrapper });
-    expect(result.current.mode).toBe("light");
-    expect(result.current.resolvedTheme).toBe("light");
-    expect(html().classList.contains("dark")).toBe(false);
+    expect(result.current.mode).toBe("dark");
+    expect(result.current.resolvedTheme).toBe("dark");
+    expect(html().classList.contains("dark")).toBe(true);
   });
 
   it("setMode switches the <html> class and persists the choice", () => {
     const { result } = renderHook(() => useThemeMode(), { wrapper });
-    act(() => result.current.setMode("dark"));
-    expect(result.current.mode).toBe("dark");
-    expect(result.current.resolvedTheme).toBe("dark");
-    expect(html().classList.contains("dark")).toBe(true);
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
-    expect(html().style.colorScheme).toBe("dark");
-
     act(() => result.current.setMode("light"));
+    expect(result.current.mode).toBe("light");
+    expect(result.current.resolvedTheme).toBe("light");
     expect(html().classList.contains("dark")).toBe(false);
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
+    expect(html().style.colorScheme).toBe("light");
+
+    act(() => result.current.setMode("dark"));
+    expect(html().classList.contains("dark")).toBe(true);
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
   });
 
   it("restores the stored choice on load", () => {
-    localStorage.setItem(THEME_STORAGE_KEY, "dark");
+    localStorage.setItem(THEME_STORAGE_KEY, "light");
     const { result } = renderHook(() => useThemeMode(), { wrapper });
-    expect(result.current.mode).toBe("dark");
+    expect(result.current.mode).toBe("light");
   });
 
   it("ignores the OS appearance (no system mode)", () => {
-    mockMatchMedia(true); // OS says dark
+    mockMatchMedia(false); // OS says light
     const { result } = renderHook(() => useThemeMode(), { wrapper });
-    expect(result.current.mode).toBe("light");
-    expect(html().classList.contains("dark")).toBe(false);
+    expect(result.current.mode).toBe("dark");
+    expect(html().classList.contains("dark")).toBe(true);
   });
 
-  it("falls back to light for an unknown stored value", () => {
+  it("falls back to dark for an unknown stored value", () => {
     localStorage.setItem(THEME_STORAGE_KEY, "system");
     const { result } = renderHook(() => useThemeMode(), { wrapper });
-    expect(result.current.mode).toBe("light");
+    expect(result.current.mode).toBe("dark");
   });
 });
 
@@ -82,10 +82,10 @@ describe("ModePicker", () => {
     expect(screen.getByRole("radiogroup", { name: "Appearance" })).toBeTruthy();
     const light = screen.getByRole("radio", { name: /light/i });
     const dark = screen.getByRole("radio", { name: /dark/i });
-    expect(light.getAttribute("aria-checked")).toBe("true");
-    expect(dark.getAttribute("aria-checked")).toBe("false");
-    expect(light.tabIndex).toBe(0); // roving tabindex: only the checked option is tabbable
-    expect(dark.tabIndex).toBe(-1);
+    expect(dark.getAttribute("aria-checked")).toBe("true");
+    expect(light.getAttribute("aria-checked")).toBe("false");
+    expect(dark.tabIndex).toBe(0); // roving tabindex: only the checked option is tabbable
+    expect(light.tabIndex).toBe(-1);
   });
 
   it("selects by click and by arrow keys", () => {
@@ -93,13 +93,13 @@ describe("ModePicker", () => {
     const light = screen.getByRole("radio", { name: /light/i });
     const dark = screen.getByRole("radio", { name: /dark/i });
 
-    fireEvent.click(dark);
-    expect(dark.getAttribute("aria-checked")).toBe("true");
-    expect(html().classList.contains("dark")).toBe(true);
-
-    fireEvent.keyDown(dark, { key: "ArrowLeft" });
+    fireEvent.click(light);
     expect(light.getAttribute("aria-checked")).toBe("true");
-    expect(document.activeElement).toBe(light);
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
+    expect(html().classList.contains("dark")).toBe(false);
+
+    fireEvent.keyDown(light, { key: "ArrowRight" });
+    expect(dark.getAttribute("aria-checked")).toBe("true");
+    expect(document.activeElement).toBe(dark);
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
   });
 });

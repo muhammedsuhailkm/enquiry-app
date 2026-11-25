@@ -8,7 +8,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
-import { useMounted, useThemeMode } from "@/app/_ui/theme"
+import { DEFAULT_THEME_MODE, useMounted, useThemeMode } from "@/app/_ui/theme"
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { resolvedTheme } = useThemeMode()
@@ -16,7 +16,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
   return (
     <Sonner
-      theme={mounted ? resolvedTheme : "light"}
+      theme={mounted ? resolvedTheme : DEFAULT_THEME_MODE}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,
