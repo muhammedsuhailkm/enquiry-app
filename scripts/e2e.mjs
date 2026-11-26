@@ -122,7 +122,7 @@ check(
 check((await a.get(`/api/enquiries?q=QT-000145`)).json?.items?.some((r) => r.id === id1), "search by Zoho quote no.");
 check((await a.post(`/api/enquiries/${id1}/status`, { to: "QUOTED", quoteNo: "QT-1" })).status === 409, "change after accept -> 409");
 check((await a.patch(`/api/enquiries/${id1}`, { scopeOfWork: "edit" })).status === 409, "edit after accept -> 409");
-check((await a.del(`/api/enquiries/${id1}`)).status === 403, "employee cannot delete closed enquiry");
+check((await a.del(`/api/enquiries/${id1}`)).status === 403, "employee cannot delete (closed) enquiry");
 
 const e2 = await a.post("/api/enquiries", { ...base, customerId: custId });
 const id2 = e2.json.id;
@@ -150,21 +150,36 @@ const after4 = (await a.get(`/api/enquiries/${e4.json.id}`)).json;
 check(after4.history.length === 3, "history has exactly CREATE, QUOTE, one close", after4.history.length);
 check((await admin.del(`/api/enquiries/${e4.json.id}`)).status === 200, "admin deletes closed enquiry");
 
-// soft delete (open enquiry)
+// soft delete: admin only, even for open enquiries
 const e5 = await a.post("/api/enquiries", { ...base, customerId: custId });
-check((await a.del(`/api/enquiries/${e5.json.id}`)).status === 200, "employee deletes open enquiry");
+check((await a.del(`/api/enquiries/${e5.json.id}`)).status === 403, "employee cannot delete open enquiry");
+check((await admin.del(`/api/enquiries/${e5.json.id}`)).status === 200, "admin deletes open enquiry");
 check((await a.get(`/api/enquiries/${e5.json.id}`)).status === 404, "deleted enquiry -> 404");
+check((await a.get(`/api/enquiries/${id1}`)).json?.canDelete === false, "canDelete false for employee");
+check((await admin.get(`/api/enquiries/${id1}`)).json?.canDelete === true, "canDelete true for admin");
 
-// 5. isolation
-check((await b.get(`/api/enquiries/${id1}`)).status === 404, "B cannot view A's enquiry (404)");
-check((await b.patch(`/api/enquiries/${e3.json.id}`, { scopeOfWork: "x" })).status === 404, "B cannot edit A's enquiry");
-check((await b.del(`/api/enquiries/${id1}`)).status === 404, "B cannot delete A's enquiry");
-const bl = await b.get("/api/enquiries");
-check(bl.json.total === 0, "B's list is empty", bl.json.total);
-const al = await a.get("/api/enquiries");
-check(al.json.items.every((r) => !("salesperson" in r)), "salesperson column hidden for employee");
+// 5. shared access: every user can view + edit every enquiry (not delete)
+const e6 = await a.post("/api/enquiries", { ...base, customerId: custId });
+check((await b.get(`/api/enquiries/${id1}`)).status === 200, "B can view A's enquiry");
+check((await b.patch(`/api/enquiries/${e6.json.id}`, { scopeOfWork: "edited by B" })).status === 200, "B can edit A's open enquiry");
+check((await b.post(`/api/enquiries/${e6.json.id}/status`, { to: "QUOTED", quoteNo: "QT-000106" })).status === 200, "B can change status of A's enquiry");
+check((await b.patch(`/api/enquiries/${id1}`, { scopeOfWork: "x" })).status === 409, "closed enquiry still not editable by B");
+check((await b.del(`/api/enquiries/${e6.json.id}`)).status === 403, "B cannot delete A's enquiry");
+const bl = await b.get("/api/enquiries?pageSize=100");
+check(bl.json.items.some((r) => r.id === e6.json.id), "B's list includes A's enquiries");
+check(bl.json.items.every((r) => r.salesperson?.name), "salesperson shown to employees");
+check(bl.json.counts?.total === bl.json.total, "list tab counts match the list", [bl.json.counts?.total, bl.json.total]);
 const adl = await admin.get(`/api/enquiries?salespersonId=${ea.json.id}`);
-check(adl.json.items.every((r) => r.salesperson?.name === "Emp A"), "admin sees salesperson column");
+check(adl.json.items.every((r) => r.salesperson?.name === "Emp A"), "admin salesperson filter");
+
+// export (admin only, PDF report)
+check((await a.get(`/api/enquiries/export`)).status === 403, "employee cannot export -> 403");
+const exRes = await fetch(`${BASE}/api/enquiries/export?salespersonId=${ea.json.id}&status=ACCEPTED`, { headers: { cookie: admin.cookie() } });
+const exPdf = Buffer.from(await exRes.arrayBuffer());
+check(exRes.status === 200 && exRes.headers.get("content-type") === "application/pdf", "admin export -> PDF", exRes.status);
+check(exPdf.subarray(0, 5).toString() === "%PDF-" && exPdf.length > 2000, "export body is a PDF", exPdf.length);
+check(/attachment; filename="enquiry-report_.+\.pdf"/.test(exRes.headers.get("content-disposition") ?? ""), "export is a download");
+check((await admin.get(`/api/enquiries/export?status=NOPE`)).status === 400, "export rejects a bad status -> 400");
 
 // 6. dashboard: A has 1 won, 1 lost, 1 cancelled, + e4 (won or lost, then deleted -> excluded)
 const ad = (await admin.get(`/api/dashboard/employees/${ea.json.id}`)).json;
@@ -173,7 +188,8 @@ check(ad.kpis.conversionRate === 33.3 && ad.kpis.winRate === 50, "conversion 33.
 check(ad.kpis.avgRevisions === 1, "avg revisions (2+0)/2 = 1", ad.kpis.avgRevisions);
 check(ad.topLostReasons[0]?.reason === "Price too high", "top lost reason");
 const mine = (await a.get("/api/dashboard?salespersonId=999999")).json;
-check(mine.salespersonId === ea.json.id && mine.kpis.total === 3, "employee dashboard forced to own scope", mine.kpis);
+// 4 = id1 (won), id2 (lost), e3 (cancelled), e6 (open, quoted by B but still A's)
+check(mine.salespersonId === ea.json.id && mine.kpis.total === 4, "employee dashboard forced to own scope", mine.kpis);
 const perf = (await admin.get("/api/dashboard/employees")).json;
 const rowA = perf.find((r) => r.id === ea.json.id);
 check(rowA?.ACCEPTED === 1 && rowA?.winRate === 50, "employee performance table row", rowA);

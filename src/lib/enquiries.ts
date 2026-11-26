@@ -5,7 +5,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { badRequest, conflict, forbidden, notFound, type CurrentUser } from "./api";
 import { enquiryScope, isAdmin } from "./authz";
 import { allowedActions } from "./enquiry-workflow";
-import { CLOSED_STATUSES, statusDisplay, type EnquiryStatus } from "./constants";
+import { CLOSED_STATUSES, ENQUIRY_STATUSES, statusDisplay, type EnquiryStatus } from "./constants";
 import { dateRange, isoToDate, todayIso } from "./dates";
 import type { enquiryCreateSchema, enquiryListQuery, enquiryUpdateSchema, workScopeSchema } from "./validators";
 import { flattenWorkTypes, groupWorkScope, setWorkScope, subWorkTypesSelect, workTypesSelect } from "./work-scope";
@@ -28,12 +28,16 @@ const listSelect = {
 } satisfies Prisma.EnquirySelect;
 
 export async function listEnquiries(user: CurrentUser, q: z.output<typeof enquiryListQuery>) {
-  const where: Prisma.EnquiryWhereInput = {
-    ...enquiryScope(user),
-    ...(q.status ? { status: q.status } : {}),
+  // Filters the status tabs count over (everything except the status tab itself and the search box).
+  const tabWhere: Prisma.EnquiryWhereInput = {
+    ...enquiryScope(),
     ...(q.customerId ? { customerId: q.customerId } : {}),
     ...(isAdmin(user) && q.salespersonId ? { salespersonId: q.salespersonId } : {}),
     ...(q.from || q.to ? { enquiryDate: dateRange(q.from, q.to) } : {}),
+  };
+  const where: Prisma.EnquiryWhereInput = {
+    ...tabWhere,
+    ...(q.status ? { status: q.status } : {}),
     // Postgres LIKE is case-sensitive, so search case-insensitively (ILIKE) as SQL Server did.
     ...(q.q
       ? {
@@ -47,7 +51,7 @@ export async function listEnquiries(user: CurrentUser, q: z.output<typeof enquir
       : {}),
   };
 
-  const [total, rows] = await prisma.$transaction([
+  const [total, rows, byStatus] = await prisma.$transaction([
     prisma.enquiry.count({ where }),
     prisma.enquiry.findMany({
       where,
@@ -56,22 +60,29 @@ export async function listEnquiries(user: CurrentUser, q: z.output<typeof enquir
       skip: (q.page - 1) * q.pageSize,
       take: q.pageSize,
     }),
+    prisma.enquiry.groupBy({ by: ["status"], where: tabWhere, _count: { _all: true }, orderBy: { status: "asc" } }),
   ]);
 
-  const admin = isAdmin(user);
+  // Per-status counts for the tabs: same shape as dashboard kpis ({ total, RECEIVED, QUOTED, ... }).
+  const counts: Record<string, number> = { total: 0, ...Object.fromEntries(ENQUIRY_STATUSES.map((s) => [s, 0])) };
+  for (const g of byStatus) {
+    const n = (g._count as { _all: number })._all;
+    counts[g.status] = (counts[g.status] ?? 0) + n;
+    counts.total += n;
+  }
+
   return {
     page: q.page,
     pageSize: q.pageSize,
     total,
-    items: rows.map(({ salesperson, workTypes, ...r }) => ({
-      ...r,
+    counts,
+    items: rows.map(({ workTypes, ...r }) => ({
+      ...r, // includes salesperson: everyone sees all enquiries, so everyone needs to see whose it is
       workTypes: flattenWorkTypes(workTypes),
       enquiryDate: r.enquiryDate.toISOString().slice(0, 10),
       statusLabel: statusDisplay(r.status, r.revisionNo),
-      // Salesperson column is admin-only
-      ...(admin ? { salesperson } : {}),
       canEdit: canEdit(user, r.status),
-      canDelete: canDelete(user, r.status),
+      canDelete: canDelete(user),
       actions: allowedActions(user, r.status),
     })),
   };
@@ -79,7 +90,7 @@ export async function listEnquiries(user: CurrentUser, q: z.output<typeof enquir
 
 export async function getEnquiry(user: CurrentUser, id: number) {
   const enq = await prisma.enquiry.findFirst({
-    where: { id, ...enquiryScope(user) },
+    where: { id, ...enquiryScope() },
     include: {
       customer: true,
       workTypes: workTypesSelect,
@@ -104,7 +115,7 @@ export async function getEnquiry(user: CurrentUser, id: number) {
     enquiryDate: enq.enquiryDate.toISOString().slice(0, 10),
     statusLabel: statusDisplay(enq.status, enq.revisionNo),
     canEdit: canEdit(user, enq.status),
-    canDelete: canDelete(user, enq.status),
+    canDelete: canDelete(user),
     actions: allowedActions(user, enq.status),
   };
 }
@@ -149,7 +160,7 @@ export async function updateEnquiry(user: CurrentUser, id: number, input: z.outp
   if (input.salespersonId !== undefined && !isAdmin(user)) throw forbidden("Only an admin can reassign the salesperson");
 
   return prisma.$transaction(async (tx) => {
-    const enq = await tx.enquiry.findFirst({ where: { id, ...enquiryScope(user) }, select: { status: true } });
+    const enq = await tx.enquiry.findFirst({ where: { id, ...enquiryScope() }, select: { status: true } });
     if (!enq) throw notFound("Enquiry not found");
     if (CLOSED_STATUSES.includes(enq.status as EnquiryStatus)) {
       throw conflict("Closed enquiries cannot be edited (an admin must reopen it first)");
@@ -190,7 +201,7 @@ export async function updateEnquiry(user: CurrentUser, id: number, input: z.outp
  */
 export async function updateWorkScope(user: CurrentUser, id: number, input: z.output<typeof workScopeSchema>) {
   await prisma.$transaction(async (tx) => {
-    const enq = await tx.enquiry.findFirst({ where: { id, ...enquiryScope(user) }, select: { status: true } });
+    const enq = await tx.enquiry.findFirst({ where: { id, ...enquiryScope() }, select: { status: true } });
     if (!enq) throw notFound("Enquiry not found");
     if (!canEdit(user, enq.status)) throw conflict("Closed enquiries cannot be edited (an admin must reopen it first)");
     await setWorkScope(tx, id, input, { isNew: false });
@@ -200,9 +211,9 @@ export async function updateWorkScope(user: CurrentUser, id: number, input: z.ou
 }
 
 export async function deleteEnquiry(user: CurrentUser, id: number) {
-  const enq = await prisma.enquiry.findFirst({ where: { id, ...enquiryScope(user) }, select: { status: true } });
+  const enq = await prisma.enquiry.findFirst({ where: { id, ...enquiryScope() }, select: { status: true } });
   if (!enq) throw notFound("Enquiry not found");
-  if (!canDelete(user, enq.status)) throw forbidden("Only an admin can delete a closed enquiry");
+  if (!canDelete(user)) throw forbidden("Only an admin can delete an enquiry");
   await prisma.enquiry.update({ where: { id }, data: { isDeleted: true, deletedAt: new Date() } });
   return { ok: true };
 }
@@ -212,9 +223,9 @@ export async function deleteEnquiry(user: CurrentUser, id: number) {
 function canEdit(_user: CurrentUser, status: string) {
   return !CLOSED_STATUSES.includes(status as EnquiryStatus);
 }
-// Employees may delete only open enquiries (so won/lost stats can't be erased); admins any.
-function canDelete(user: CurrentUser, status: string) {
-  return isAdmin(user) || !CLOSED_STATUSES.includes(status as EnquiryStatus);
+// Deleting (soft) is admin-only; everyone else can view and edit every enquiry.
+function canDelete(user: CurrentUser) {
+  return isAdmin(user);
 }
 
 async function resolveSalesperson(user: CurrentUser, requested?: number) {

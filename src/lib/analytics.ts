@@ -65,9 +65,9 @@ export async function dashboard(f: AnalyticsFilter) {
       take: 5,
     }),
     monthlyTrend(f),
-    prisma.leadSource.findMany({ select: { id: true, name: true } }),
-    prisma.workType.findMany({ select: { id: true, name: true } }),
-    prisma.category.findMany({ select: { id: true, name: true } }),
+    prisma.leadSource.findMany({ select: { id: true, name: true, isActive: true } }),
+    prisma.workType.findMany({ select: { id: true, name: true, isActive: true } }),
+    prisma.category.findMany({ select: { id: true, name: true, isActive: true } }),
   ]);
 
   const totals = emptyCounts();
@@ -76,10 +76,13 @@ export async function dashboard(f: AnalyticsFilter) {
     totals.total += r._count._all;
   }
 
-  const breakdown = (rows: { key: number; status: string; count: number }[], names: { id: number; name: string }[]) => {
-    const nameOf = new Map(names.map((n) => [n.id, n.name]));
+  const breakdown = (
+    rows: { key: number; status: string; count: number }[],
+    names: { id: number; name: string; isActive: boolean }[],
+  ) => {
+    const byId = new Map(names.map((n) => [n.id, n]));
     return [...pivot(rows).entries()]
-      .map(([id, c]) => ({ id, name: nameOf.get(id) ?? `#${id}`, ...withRates(c) }))
+      .map(([id, c]) => ({ id, name: byId.get(id)?.name ?? `#${id}`, isActive: byId.get(id)?.isActive ?? false, ...withRates(c) }))
       .sort((a, b) => b.total - a.total);
   };
 

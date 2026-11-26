@@ -105,6 +105,9 @@ export const enquiryListQuery = z.object({
   q: z.string().trim().max(100).optional(),
 });
 
+/** Admin export: the list filters that matter for a report (no paging / search). */
+export const enquiryExportQuery = enquiryListQuery.pick({ status: true, salespersonId: true, from: true, to: true });
+
 export const statusChangeSchema = z
   .object({
     to: z.enum(["QUOTED", "ACCEPTED", "REJECTED", "CANCELLED"]),

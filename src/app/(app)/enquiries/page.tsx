@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Eye, Inbox, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Eye, Inbox, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,7 @@ import { api, errMsg, qs, type Json } from "../../_ui/api";
 import { DateRangeFilter, formatDate, PageHeader, type Range } from "../../_ui/PageHeader";
 import { customerLabel } from "../../_ui/customer";
 import { EnquiryNo, QuoteNoTag, WorkTypeTags } from "../../_ui/EnquiryNo";
+import { ExportEnquiriesDialog } from "../../_ui/ExportEnquiriesDialog";
 import { StatusControl } from "../../_ui/StatusControl";
 import { initials, useMe } from "../../_ui/useMe";
 
@@ -108,7 +109,7 @@ function EmptyState({ filtered }: { filtered: boolean }) {
  * Mobile list item. Only the underlined enquiry number opens the enquiry, so taps on the
  * status badge or the ⋯ menu can't open it by accident.
  */
-function EnquiryCard({ r, admin, onDone, onDelete }: { r: Json; admin: boolean; onDone: () => void; onDelete: (r: Json) => void }) {
+function EnquiryCard({ r, onDone, onDelete }: { r: Json; onDone: () => void; onDelete: (r: Json) => void }) {
   return (
     <li className="grid gap-3 rounded-2xl border border-primary/5 bg-card p-4 shadow-card">
       <div className="flex items-center justify-between gap-3">
@@ -128,7 +129,7 @@ function EnquiryCard({ r, admin, onDone, onDelete }: { r: Json; admin: boolean; 
       </div>
       <div className="flex items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground">
         <span className="flex min-w-0 items-center gap-2">
-          {admin && r.salesperson && (
+          {r.salesperson && (
             <>
               <Avatar className="size-5">
                 <AvatarFallback className="text-[10px] font-semibold">{initials(r.salesperson.name)}</AvatarFallback>
@@ -161,6 +162,7 @@ export default function EnquiriesPage() {
   const [counts, setCounts] = useState<Json>(null);
   const [people, setPeople] = useState<Json[]>([]);
   const [toDelete, setToDelete] = useState<Json>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   // Debounce the search box.
   useEffect(() => {
@@ -176,11 +178,11 @@ export default function EnquiriesPage() {
     api(
       `/api/enquiries?${qs({ page, pageSize, q, status: status === "all" ? undefined : status, salespersonId: sp, ...range })}`,
     )
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        setCounts(d.counts); // tab counts come with the list, so they always match what it shows
+      })
       .catch((e) => toast.error(errMsg(e)));
-    api(`/api/dashboard?${qs({ salespersonId: sp, ...range })}`)
-      .then((d) => setCounts(d.kpis))
-      .catch(() => {});
   }, [page, pageSize, q, status, sp, range]);
   useEffect(load, [load]);
 
@@ -213,7 +215,7 @@ export default function EnquiriesPage() {
   const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
   const filtered = !!(q || sp || range.from || range.to || status !== "all");
-  const cols = admin ? 6 : 5;
+  const cols = 6;
 
   const pager = (
     <div className="flex gap-1">
@@ -229,6 +231,12 @@ export default function EnquiriesPage() {
   return (
     <>
       <PageHeader title="Enquiries" description="Track every enquiry from received to won or lost.">
+        {admin && (
+          <Button variant="outline" onClick={() => setExportOpen(true)}>
+            <Download />
+            Export
+          </Button>
+        )}
         <Button asChild className="max-md:hidden">
           <Link href="/enquiries/new">
             <Plus />
@@ -323,7 +331,7 @@ export default function EnquiriesPage() {
           {data && data.items.length > 0 && (
             <ul className="grid gap-3">
               {data.items.map((r: Json) => (
-                <EnquiryCard key={r.id} r={r} admin={admin} onDone={load} onDelete={setToDelete} />
+                <EnquiryCard key={r.id} r={r} onDone={load} onDelete={setToDelete} />
               ))}
             </ul>
           )}
@@ -344,7 +352,7 @@ export default function EnquiriesPage() {
               <col className="w-52" />
               <col />
               <col className="w-[22%]" />
-              {admin && <col className="w-[16%]" />}
+              <col className="w-[16%]" />
               <col className="w-40" />
               <col className="w-14" />
             </colgroup>
@@ -353,7 +361,7 @@ export default function EnquiriesPage() {
                 <TableHead className="pl-4">Enquiry</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Work type · Category</TableHead>
-                {admin && <TableHead>Salesperson</TableHead>}
+                <TableHead>Salesperson</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="pr-4">
                   <span className="sr-only">Actions</span>
@@ -402,11 +410,9 @@ export default function EnquiriesPage() {
                       <span className="max-w-full truncate text-xs text-muted-foreground">{r.category.name}</span>
                     </div>
                   </TableCell>
-                  {admin && (
-                    <TableCell>
-                      <span className="block truncate">{r.salesperson?.name}</span>
-                    </TableCell>
-                  )}
+                  <TableCell>
+                    <span className="block truncate">{r.salesperson?.name}</span>
+                  </TableCell>
                   <TableCell>
                     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] justify-items-start gap-1">
                       <StatusControl enquiry={r} onDone={load} variant="badge" />
@@ -472,6 +478,15 @@ export default function EnquiriesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {admin && (
+        <ExportEnquiriesDialog
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          people={people}
+          initial={{ salesperson, status, range }}
+        />
+      )}
     </>
   );
 }

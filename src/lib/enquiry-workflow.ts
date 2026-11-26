@@ -38,7 +38,7 @@ export async function changeStatus(
 
   return prisma.$transaction(async (tx) => {
     const enq = await tx.enquiry.findFirst({
-      where: { id: enquiryId, ...enquiryScope(user) },
+      where: { id: enquiryId, ...enquiryScope() },
       select: { status: true, revisionNo: true, quoteNo: true },
     });
     if (!enq) throw notFound("Enquiry not found");

@@ -5,7 +5,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..", "src");
-const SKIP = [join(ROOT, "generated"), join(ROOT, "styles")]; // Prisma output + the token file itself
+// Prisma output, the token file itself, and PDF reports (fixed print colours on white paper, not themed).
+const SKIP = [join(ROOT, "generated"), join(ROOT, "styles"), join(ROOT, "lib", "pdf")];
 
 const UTIL = "(?:bg|text|border|ring|fill|stroke|shadow|outline|from|via|to|decoration|divide|accent|caret|placeholder)";
 const PALETTE =

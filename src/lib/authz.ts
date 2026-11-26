@@ -4,9 +4,9 @@ import type { CurrentUser } from "./api";
 export const isAdmin = (u: CurrentUser) => u.role === "ADMIN";
 
 /**
- * Row-level scope for every enquiry query. Employees only ever see their own
- * (salesperson) enquiries; anything else is a 404, not a 403, to avoid leaking IDs.
+ * Row-level scope for every enquiry query. Since 2026-11-26 every user can view and edit every
+ * (non-deleted) enquiry; only deleting is admin-only (see canDelete in enquiries.ts).
  */
-export function enquiryScope(user: CurrentUser): Prisma.EnquiryWhereInput {
-  return isAdmin(user) ? { isDeleted: false } : { isDeleted: false, salespersonId: user.id };
+export function enquiryScope(): Prisma.EnquiryWhereInput {
+  return { isDeleted: false };
 }

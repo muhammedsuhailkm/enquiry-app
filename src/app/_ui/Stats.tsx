@@ -103,16 +103,17 @@ function Empty({ children = "No data for this period" }: { children?: React.Reac
 export function TrendChart({ monthly }: { monthly: Json[] }) {
   const data = monthly.map((m) => ({ ...m, label: monthLabel(m.month) }));
   return (
-    <Card className="min-w-0">
+    // h-full + flex-1: the chart grows to the row height, so this card always ends level with the status card.
+    <Card className="h-full min-w-0">
       <CardHeader>
         <CardTitle>Enquiries vs won</CardTitle>
         <CardDescription>Monthly totals by enquiry date</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col">
         {data.length === 0 ? (
           <Empty />
         ) : (
-          <ChartContainer config={trendConfig} className="aspect-auto h-[240px] w-full">
+          <ChartContainer config={trendConfig} className="aspect-auto min-h-[240px] w-full flex-1">
             <AreaChart data={data} margin={{ left: 0, right: 12, top: 8 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
@@ -151,14 +152,15 @@ export function StatusDonut({ k }: { k: Json }) {
         <CardTitle>Status breakdown</CardTitle>
         <CardDescription>All enquiries in range</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4">
+      <CardContent className="grid gap-3">
         {k.total === 0 ? (
           <Empty />
         ) : (
-          <ChartContainer config={statusConfig} className="mx-auto aspect-square h-[200px]">
+          // Compact donut: ring radii are percentages so it scales with the box (smaller beside the trend chart on lg).
+          <ChartContainer config={statusConfig} className="mx-auto aspect-square h-[200px] lg:h-[164px]">
             <PieChart>
               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="status" />} />
-              <Pie data={data} dataKey="count" nameKey="status" innerRadius={60} outerRadius={88} strokeWidth={2}>
+              <Pie data={data} dataKey="count" nameKey="status" innerRadius="68%" outerRadius="100%" strokeWidth={2}>
                 {data.map((d) => (
                   <Cell key={d.status} fill={`var(--color-${d.status})`} />
                 ))}
@@ -180,7 +182,7 @@ export function StatusDonut({ k }: { k: Json }) {
             </PieChart>
           </ChartContainer>
         )}
-        <ul className="grid gap-2 text-sm">
+        <ul className="grid gap-2 text-sm lg:gap-1.5">
           {STATUSES.map((s) => (
             <li key={s} className="flex items-center gap-2">
               <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: STATUS_COLOR[s] }} />
@@ -202,7 +204,9 @@ const leadConfig = {
   ACCEPTED: { label: "Won", color: "var(--chart-3)" },
 } satisfies ChartConfig;
 
-export function LeadSourceChart({ rows }: { rows: Json[] }) {
+// Disabled lead sources are left out of the chart (they still count in the KPIs and the breakdown table).
+export function LeadSourceChart({ rows: all }: { rows: Json[] }) {
+  const rows = all.filter((r) => r.isActive !== false);
   return (
     <Card className="min-w-0">
       <CardHeader>
